@@ -1,0 +1,106 @@
+{
+  "options": {
+    "option": [
+      {
+        "symbol": "AAPL260530P00165000",
+        "root_symbol": "AAPL",
+        "expiration_date": "2026-05-30",
+        "strike": 165.0,
+        "option_type": "put",
+        "bid": 1.80,
+        "ask": 1.90,
+        "last": 1.85,
+        "volume": 500,
+        "open_interest": 3200,
+        "iv": 0.28,
+        "greeks": {
+          "delta": -0.22,
+          "gamma": 0.015,
+          "theta": -0.04,
+          "vega": 0.12,
+          "rho": -0.05,
+          "phi": 0.0,
+          "bid_iv": 0.27,
+          "mid_iv": 0.28,
+          "ask_iv": 0.29,
+          "smv_vol": 0.28
+        }
+      },
+      {
+        "symbol": "AAPL260530P00170000",
+        "root_symbol": "AAPL",
+        "expiration_date": "2026-05-30",
+        "strike": 170.0,
+        "option_type": "put",
+        "bid": 2.40,
+        "ask": 2.60,
+        "last": 2.50,
+        "volume": 800,
+        "open_interest": 5100,
+        "iv": 0.30,
+        "greeks": {
+          "delta": -0.28,
+          "gamma": 0.018,
+          "theta": -0.05,
+          "vega": 0.14,
+          "rho": -0.07,
+          "phi": 0.0,
+          "bid_iv": 0.29,
+          "mid_iv": 0.30,
+          "ask_iv": 0.31,
+          "smv_vol": 0.30
+        }
+      },
+      {
+        "symbol": "AAPL260530P00175000",
+        "root_symbol": "AAPL",
+        "expiration_date": "2026-05-30",
+        "strike": 175.0,
+        "option_type": "put",
+        "bid": 3.20,
+        "ask": 3.40,
+        "last": 3.30,
+        "volume": 1200,
+        "open_interest": 7800,
+        "iv": 0.32,
+        "greeks": {
+          "delta": -0.35,
+          "gamma": 0.020,
+          "theta": -0.06,
+          "vega": 0.16,
+          "rho": -0.09,
+          "phi": 0.0,
+          "bid_iv": 0.31,
+          "mid_iv": 0.32,
+          "ask_iv": 0.33,
+          "smv_vol": 0.32
+        }
+      },
+      {
+        "symbol": "AAPL260530C00180000",
+        "root_symbol": "AAPL",
+        "expiration_date": "2026-05-30",
+        "strike": 180.0,
+        "option_type": "call",
+        "bid": 4.10,
+        "ask": 4.30,
+        "last": 4.20,
+        "volume": 900,
+        "open_interest": 6200,
+        "iv": 0.29,
+        "greeks": {
+          "delta": 0.52,
+          "gamma": 0.019,
+          "theta": -0.055,
+          "vega": 0.15,
+          "rho": 0.08,
+          "phi": 0.0,
+          "bid_iv": 0.28,
+          "mid_iv": 0.29,
+          "ask_iv": 0.30,
+          "smv_vol": 0.29
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wheel Screener</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d0f14;
+      --surface:   #151821;
+      --surface2:  #1c2030;
+      --border:    #252a3a;
+      --accent:    #5b8dee;
+      --accent-dim:#3a5fa8;
+      --pass:      #22c55e;
+      --pass-bg:   #052e16;
+      --caution:   #f59e0b;
+      --caution-bg:#2a1a02;
+      --fail:      #ef4444;
+      --fail-bg:   #2c0808;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --radius:    12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 16px 80px;
+    }
+
+    /* ── Header ─────────────────────────────────── */
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .logo svg { width: 32px; height: 32px; }
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #fff 30%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 4px;
+    }
+
+    /* ── Search card ─────────────────────────────── */
+    .search-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      width: 100%;
+      max-width: 540px;
+      margin-bottom: 32px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    #ticker-input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 12px 16px;
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #ticker-input::placeholder { color: var(--muted); font-weight: 400; letter-spacing: 0; }
+    #ticker-input:focus { border-color: var(--accent); }
+
+    #screen-btn {
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+      white-space: nowrap;
+    }
+    #screen-btn:hover { background: #4a7de0; }
+    #screen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Spinner ─────────────────────────────────── */
+    .spinner {
+      display: none;
+      width: 20px; height: 20px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 24px auto 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner.active { display: block; }
+
+    /* ── Error banner ────────────────────────────── */
+    .error-banner {
+      display: none;
+      background: var(--fail-bg);
+      border: 1px solid var(--fail);
+      color: var(--fail);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.9rem;
+      margin-top: 16px;
+    }
+    .error-banner.visible { display: block; }
+
+    /* ── Results ─────────────────────────────────── */
+    #results {
+      width: 100%;
+      max-width: 700px;
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+      animation: fadeUp 0.4s ease;
+    }
+    #results.visible { display: flex; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Verdict banner ──────────────────────────── */
+    .verdict-card {
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      border: 1px solid transparent;
+    }
+    .verdict-card.STRONG      { background: var(--pass-bg);    border-color: var(--pass); }
+    .verdict-card.ACCEPTABLE  { background: var(--caution-bg); border-color: var(--caution); }
+    .verdict-card["DO NOT WHEEL"] { background: var(--fail-bg); border-color: var(--fail); }
+    .verdict-icon {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 22px;
+    }
+    .verdict-icon.STRONG     { background: var(--pass); }
+    .verdict-icon.ACCEPTABLE { background: var(--caution); }
+    .verdict-icon.fail       { background: var(--fail); }
+    .verdict-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-bottom: 4px;
+    }
+    .verdict-value {
+      font-size: 1.45rem;
+      font-weight: 700;
+    }
+    .verdict-value.STRONG     { color: var(--pass); }
+    .verdict-value.ACCEPTABLE { color: var(--caution); }
+    .verdict-value.fail       { color: var(--fail); }
+
+    /* ── Checks list ─────────────────────────────── */
+    .checks-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .checks-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 16px 24px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .check-row {
+      display: grid;
+      grid-template-columns: 36px 1fr auto;
+      align-items: start;
+      gap: 12px;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .check-row:last-child { border-bottom: none; }
+    .check-row:hover { background: var(--surface2); }
+
+    .check-icon {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .check-icon.PASS    { background: var(--pass-bg);    color: var(--pass);    border: 1px solid var(--pass); }
+    .check-icon.CAUTION { background: var(--caution-bg); color: var(--caution); border: 1px solid var(--caution); }
+    .check-icon.FAIL    { background: var(--fail-bg);    color: var(--fail);    border: 1px solid var(--fail); }
+
+    .check-body { display: flex; flex-direction: column; gap: 2px; }
+    .check-name { font-size: 0.9rem; font-weight: 600; }
+    .check-note { font-size: 0.8rem; color: var(--muted); line-height: 1.45; }
+
+    .check-value {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-align: right;
+      white-space: nowrap;
+      padding-top: 2px;
+    }
+    .check-value.PASS    { color: var(--pass); }
+    .check-value.CAUTION { color: var(--caution); }
+    .check-value.FAIL    { color: var(--fail); }
+
+    /* ── Trade card ──────────────────────────────── */
+    .trade-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+    }
+    .trade-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+    .trade-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 16px;
+    }
+    .trade-item { display: flex; flex-direction: column; gap: 4px; }
+    .trade-item-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .trade-item-value { font-size: 1.05rem; font-weight: 700; }
+
+    /* ── Risk note ───────────────────────────────── */
+    .risk-note {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.6;
+      text-align: center;
+    }
+    .risk-note strong { color: var(--text); }
+
+    /* ── Trade parameters panel ──────────────────── */
+    .params-section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 8px 0 4px;
+      border-top: 1px solid var(--border);
+    }
+
+    .params-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 580px) {
+      .params-grid { grid-template-columns: 1fr; }
+    }
+
+    .param-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .param-card-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+
+    .param-stat-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .param-stat { display: flex; flex-direction: column; gap: 3px; }
+    .param-stat-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+    }
+    .param-stat-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .param-stat-value.large {
+      font-size: 1.6rem;
+    }
+    .param-stat-value.highlight {
+      color: var(--accent);
+    }
+
+    .param-note {
+      font-size: 0.78rem;
+      line-height: 1.55;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+    }
+    .param-note.green  { color: var(--pass);    background: var(--pass-bg);    border-color: var(--pass); }
+    .param-note.amber  { color: var(--caution); background: var(--caution-bg); border-color: var(--caution); }
+    .param-note.red    { color: var(--fail);    background: var(--fail-bg);    border-color: var(--fail); }
+    .param-note.muted  { color: var(--muted);   background: var(--surface2);   border-color: var(--border); }
+
+    .param-placeholder {
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-style: italic;
+    }
+
+    .cost-basis-row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .cost-basis-row label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+    }
+    .cost-basis-row input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 9px 12px;
+      border-radius: 8px;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+    .cost-basis-row input:focus { border-color: var(--accent); }
+    .cost-basis-row input::placeholder { color: var(--muted); font-weight: 400; }
+
+    .params-disclaimer {
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.55;
+      padding: 4px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="16" cy="16" r="15" stroke="#5b8dee" stroke-width="2"/>
+        <circle cx="16" cy="16" r="9"  stroke="#5b8dee" stroke-width="1.5" stroke-dasharray="3 2"/>
+        <circle cx="16" cy="16" r="3"  fill="#5b8dee"/>
+        <line x1="16" y1="1"  x2="16" y2="6"  stroke="#5b8dee" stroke-width="2" stroke-linecap="round"/>
+        <line x1="16" y1="26" x2="16" y2="31" stroke="#5b8dee" stroke-width="2" stroke-linecap="round"/>
+        <line x1="1"  y1="16" x2="6"  y2="16" stroke="#5b8dee" stroke-width="2" stroke-linecap="round"/>
+        <line x1="26" y1="16" x2="31" y2="16" stroke="#5b8dee" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <h1>Wheel Screener</h1>
+    </div>
+    <p class="subtitle">Evaluate any stock as a cash-secured put wheel candidate</p>
+  </header>
+
+  <div class="search-card">
+    <div class="input-row">
+      <input
+        id="ticker-input"
+        type="text"
+        placeholder="Enter ticker — e.g. AAPL"
+        maxlength="10"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button id="screen-btn" onclick="runScreen()">Screen</button>
+    </div>
+    <div class="spinner" id="spinner"></div>
+    <div class="error-banner" id="error-banner"></div>
+  </div>
+
+  <div id="results"></div>
+
+  <script>
+    const input  = document.getElementById('ticker-input');
+    const btn    = document.getElementById('screen-btn');
+    const spinner = document.getElementById('spinner');
+    const errorEl = document.getElementById('error-banner');
+    const results = document.getElementById('results');
+
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') runScreen(); });
+
+    const STATUS_ICON  = { PASS: '✓', CAUTION: '!', FAIL: '✕' };
+    const VERDICT_ICON = {
+      'STRONG CANDIDATE': '✓',
+      'ACCEPTABLE':       '!',
+      'DO NOT WHEEL':     '✕',
+    };
+    const VERDICT_CLASS = {
+      'STRONG CANDIDATE': 'STRONG',
+      'ACCEPTABLE':       'ACCEPTABLE',
+      'DO NOT WHEEL':     'fail',
+    };
+
+    async function runScreen() {
+      const ticker = input.value.trim().toUpperCase();
+      if (!ticker) { input.focus(); return; }
+
+      // Reset UI
+      btn.disabled = true;
+      spinner.classList.add('active');
+      errorEl.classList.remove('visible');
+      results.classList.remove('visible');
+      results.innerHTML = '';
+
+      try {
+        const res = await fetch('/api/screen', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ticker }),
+        });
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          showError(data.error || 'Unknown error');
+          return;
+        }
+
+        renderResults(data);
+      } catch (err) {
+        showError('Network error — is the server running?');
+      } finally {
+        btn.disabled = false;
+        spinner.classList.remove('active');
+      }
+    }
+
+    function showError(msg) {
+      errorEl.textContent = msg;
+      errorEl.classList.add('visible');
+    }
+
+    function esc(str) {
+      return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Recommendation engine ──────────────────────────────────────────────
+
+    function calcCSP(stockPrice, ivr, trend) {
+      let targetDelta, targetDTE;
+
+      if (ivr >= 55) {
+        targetDTE = 30;
+        if (trend === 'bullish') targetDelta = 0.30;
+        else if (trend === 'bearish') targetDelta = 0.25;
+        else targetDelta = 0.28;
+      } else if (ivr >= 35) {
+        targetDTE = 38;
+        if (trend === 'bullish') targetDelta = 0.28;
+        else if (trend === 'bearish') targetDelta = 0.22;
+        else targetDelta = 0.25;
+      } else {
+        targetDTE = 45;
+        if (trend === 'bullish') targetDelta = 0.25;
+        else if (trend === 'bearish') targetDelta = 0.20;
+        else targetDelta = 0.22;
+      }
+
+      const otmPct = (1 - targetDelta) * 0.18;
+      const approxStrike = Math.round(stockPrice * (1 - otmPct));
+      const minPremium = Math.round(approxStrike * 0.01 * 100) / 100;
+
+      let noteText, noteClass;
+      if (ivr >= 55 && trend === 'bullish') {
+        noteText = 'Elevated IV and bullish trend — this is a strong CSP environment. Stay disciplined at your delta, do not go higher chasing more premium.';
+        noteClass = 'green';
+      } else if (ivr >= 55 && trend === 'bearish') {
+        noteText = 'High IV often signals stress. Go conservative with delta 0.25 max. Confirm the stock hasn\'t broken structure before entering.';
+        noteClass = 'red';
+      } else if (ivr < 35) {
+        noteText = 'IV is low — premiums are thin. Only enter if the stock is exceptional quality. Consider waiting for IVR to rise above 35% before opening.';
+        noteClass = 'amber';
+      } else {
+        noteText = 'Standard conditions. Follow parameters above and confirm the strike sits at or below a visible support level on the daily chart.';
+        noteClass = 'muted';
+      }
+
+      return { targetDelta, approxStrike, targetDTE, minPremium, noteText, noteClass };
+    }
+
+    function calcCC(stockPrice, ivr, trend, costBasis) {
+      let ccTargetDelta, ccTargetDTE;
+
+      if (ivr >= 55) {
+        ccTargetDTE = 21;
+        if (trend === 'bullish') ccTargetDelta = 0.25;
+        else if (trend === 'bearish') ccTargetDelta = 0.20;
+        else ccTargetDelta = 0.22;
+      } else if (ivr >= 35) {
+        ccTargetDTE = 28;
+        if (trend === 'bullish') ccTargetDelta = 0.22;
+        else if (trend === 'bearish') ccTargetDelta = 0.18;
+        else ccTargetDelta = 0.20;
+      } else {
+        ccTargetDTE = 35;
+        ccTargetDelta = 0.20;
+      }
+
+      const otmPctCC = (1 - ccTargetDelta) * 0.14;
+      let ccApproxStrike = Math.round(stockPrice * (1 + otmPctCC));
+      let strikeAdjusted = false;
+
+      if (ccApproxStrike < costBasis) {
+        ccApproxStrike = Math.round(costBasis);
+        strikeAdjusted = true;
+      }
+
+      const ccMinPremium = Math.round(ccApproxStrike * 0.007 * 100) / 100;
+      const profitIfCalled = Math.round((ccApproxStrike - costBasis) * 100) / 100;
+
+      let noteText, noteClass;
+      if (strikeAdjusted) {
+        noteText = 'Strike adjusted up to cost basis. Never sell a covered call below your cost basis — that locks in a guaranteed loss on assignment.';
+        noteClass = 'red';
+      } else if (trend === 'bearish') {
+        noteText = 'Stock is below its 50-day MA. Prioritize getting called away over maximizing premium. Consider accepting a lower strike closer to current price to exit the position sooner.';
+        noteClass = 'amber';
+      } else if (ivr < 35 && trend === 'bullish') {
+        noteText = 'Low IV but bullish trend — the stock may recover. You can afford to be patient with your CC strike. Keep it above cost basis and wait for IVR to improve.';
+        noteClass = 'green';
+      } else {
+        noteText = 'Standard CC conditions. Sell at your target delta, confirm the strike is above cost basis, and close at 50% of max profit.';
+        noteClass = 'muted';
+      }
+
+      return { ccTargetDelta, ccApproxStrike, ccTargetDTE, ccMinPremium, profitIfCalled, noteText, noteClass };
+    }
+
+    function renderTradeParams(data) {
+      const { stock_price: stockPrice, ivr, trend, verdict } = data;
+
+      // Only show for passing verdicts and when we have the needed inputs
+      if (verdict === 'DO NOT WHEEL') return '';
+      if (stockPrice == null || ivr == null || trend == null) return '';
+
+      const csp = calcCSP(stockPrice, ivr, trend);
+
+      // CSP card
+      const cspHtml = `
+        <div class="param-card">
+          <div>
+            <div class="param-card-title">Cash-secured put</div>
+          </div>
+          <div class="param-stat-row">
+            <div class="param-stat">
+              <span class="param-stat-label">Target delta</span>
+              <span class="param-stat-value large">${csp.targetDelta.toFixed(2)}</span>
+            </div>
+            <div class="param-stat">
+              <span class="param-stat-label">Approx. strike</span>
+              <span class="param-stat-value large">$${csp.approxStrike}</span>
+            </div>
+          </div>
+          <div class="param-stat-row">
+            <div class="param-stat">
+              <span class="param-stat-label">Target DTE</span>
+              <span class="param-stat-value">${csp.targetDTE} days</span>
+            </div>
+            <div class="param-stat">
+              <span class="param-stat-label">Min. premium</span>
+              <span class="param-stat-value">$${csp.minPremium.toFixed(2)}</span>
+            </div>
+          </div>
+          <div class="param-note ${esc(csp.noteClass)}">${esc(csp.noteText)}</div>
+        </div>
+      `;
+
+      // CC card — rendered with placeholder or live data depending on costBasis
+      const ccCardHtml = buildCCCard(stockPrice, ivr, trend, null);
+
+      return `
+        <div class="params-section-label">Trade parameters</div>
+        <div class="params-grid">
+          ${cspHtml}
+          ${ccCardHtml}
+        </div>
+        <div class="params-disclaimer">
+          Strike prices are approximations based on delta heuristics. Always confirm against the live options chain in your brokerage before trading.
+        </div>
+      `;
+    }
+
+    function buildCCCard(stockPrice, ivr, trend, costBasis) {
+      let innerHtml;
+
+      if (costBasis == null || isNaN(costBasis)) {
+        innerHtml = `
+          <p class="param-placeholder">Enter your cost basis after assignment to see CC parameters.</p>
+          <div class="cost-basis-row">
+            <label for="cost-basis-input">Cost basis per share ($)</label>
+            <input
+              id="cost-basis-input"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="e.g. 145.00"
+              oninput="onCostBasisInput(${stockPrice}, ${ivr}, '${esc(trend)}')"
+            />
+          </div>
+        `;
+      } else {
+        const cc = calcCC(stockPrice, ivr, trend, costBasis);
+        innerHtml = `
+          <div class="param-stat-row">
+            <div class="param-stat">
+              <span class="param-stat-label">Target delta</span>
+              <span class="param-stat-value large">${cc.ccTargetDelta.toFixed(2)}</span>
+            </div>
+            <div class="param-stat">
+              <span class="param-stat-label">Approx. strike</span>
+              <span class="param-stat-value large">$${cc.ccApproxStrike}</span>
+            </div>
+          </div>
+          <div class="param-stat-row">
+            <div class="param-stat">
+              <span class="param-stat-label">Target DTE</span>
+              <span class="param-stat-value">${cc.ccTargetDTE} days</span>
+            </div>
+            <div class="param-stat">
+              <span class="param-stat-label">Min. premium</span>
+              <span class="param-stat-value">$${cc.ccMinPremium.toFixed(2)}</span>
+            </div>
+          </div>
+          <div class="param-stat">
+            <span class="param-stat-label">Min. profit if called away</span>
+            <span class="param-stat-value highlight">$${cc.profitIfCalled.toFixed(2)}</span>
+          </div>
+          <div class="param-note ${esc(cc.noteClass)}">${esc(cc.noteText)}</div>
+          <div class="cost-basis-row">
+            <label for="cost-basis-input">Cost basis per share ($)</label>
+            <input
+              id="cost-basis-input"
+              type="number"
+              min="0"
+              step="0.01"
+              value="${costBasis}"
+              oninput="onCostBasisInput(${stockPrice}, ${ivr}, '${esc(trend)}')"
+            />
+          </div>
+        `;
+      }
+
+      return `
+        <div class="param-card" id="cc-card">
+          <div class="param-card-title">Covered call</div>
+          ${innerHtml}
+        </div>
+      `;
+    }
+
+    function onCostBasisInput(stockPrice, ivr, trend) {
+      const input = document.getElementById('cost-basis-input');
+      const val = parseFloat(input.value);
+      const costBasis = isNaN(val) || val <= 0 ? null : val;
+      const ccCard = document.getElementById('cc-card');
+      if (ccCard) {
+        ccCard.outerHTML = buildCCCard(stockPrice, ivr, trend, costBasis);
+        // Re-focus the input and restore cursor to end
+        const newInput = document.getElementById('cost-basis-input');
+        if (newInput) {
+          newInput.focus();
+          const len = newInput.value.length;
+          newInput.setSelectionRange(len, len);
+        }
+      }
+    }
+
+    function renderResults(data) {
+      const vc  = VERDICT_CLASS[data.verdict] || 'fail';
+      const vi  = VERDICT_ICON[data.verdict]  || '?';
+
+      let html = `
+        <div class="verdict-card ${vc}">
+          <div class="verdict-icon ${vc}">${vi}</div>
+          <div>
+            <div class="verdict-label">${esc(data.symbol)} — Verdict</div>
+            <div class="verdict-value ${vc}">${esc(data.verdict)}</div>
+          </div>
+        </div>
+
+        <div class="checks-card">
+          <div class="checks-title">Checklist</div>
+      `;
+
+      for (const c of data.checks) {
+        const icon = STATUS_ICON[c.status] || '?';
+        html += `
+          <div class="check-row">
+            <div class="check-icon ${esc(c.status)}">${icon}</div>
+            <div class="check-body">
+              <div class="check-name">${esc(c.name)}</div>
+              <div class="check-note">${esc(c.note)}</div>
+            </div>
+            <div class="check-value ${esc(c.status)}">${esc(c.value)}</div>
+          </div>
+        `;
+      }
+
+      html += `</div>`;
+
+      // Suggested trade
+      if (data.trade) {
+        const t = data.trade;
+        html += `
+          <div class="trade-card">
+            <div class="trade-title">Suggested Trade</div>
+            <div class="trade-grid">
+              <div class="trade-item">
+                <span class="trade-item-label">Expiration</span>
+                <span class="trade-item-value">${esc(t.expiration)}</span>
+              </div>
+              <div class="trade-item">
+                <span class="trade-item-label">DTE</span>
+                <span class="trade-item-value">${esc(t.dte)} days</span>
+              </div>
+              <div class="trade-item">
+                <span class="trade-item-label">Strike</span>
+                <span class="trade-item-value">$${parseFloat(t.strike).toFixed(2)}</span>
+              </div>
+              <div class="trade-item">
+                <span class="trade-item-label">Delta</span>
+                <span class="trade-item-value">${parseFloat(t.delta).toFixed(2)}</span>
+              </div>
+              ${t.min_premium != null ? `
+              <div class="trade-item">
+                <span class="trade-item-label">Min Premium</span>
+                <span class="trade-item-value">$${parseFloat(t.min_premium).toFixed(2)}</span>
+              </div>` : ''}
+            </div>
+          </div>
+        `;
+      }
+
+      // Trade parameters panel
+      html += renderTradeParams(data);
+
+      html += `
+        <div class="risk-note">
+          Assignment is possible on any cash-secured put. Only run this strategy on stocks you are
+          comfortable holding 100 shares of at the strike price.
+          <strong>This tool is not financial advice.</strong>
+        </div>
+      `;
+
+      results.innerHTML = html;
+      results.classList.add('visible');
+    }
+  </script>
+
+</body>
+</html>

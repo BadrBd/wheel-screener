@@ -1,0 +1,35 @@
+# Wheel Strategy Screener — Scoring Thresholds
+# All pass/caution/fail cutoffs live here. Do not hardcode in check functions.
+
+market_cap:
+  pass_min: 5_000_000_000       # > $5B → Pass
+  caution_min: 2_000_000_000    # $2B–$5B → Caution
+                                # < $2B → Fail
+
+stock_price:
+  pass_min: 20.0                # $20–$150 → Pass
+  pass_max: 150.0               # outside range → Caution
+
+iv_rank:
+  pass_min: 30.0                # 30–60% → Pass
+  pass_max: 60.0
+  caution_max: 70.0             # 60–70% → Caution (above threshold)
+                                # > 70% → Caution (something may be wrong)
+                                # < 20% → Fail (premiums too thin)
+  fail_below: 20.0
+
+sma_trend:
+  lookback_days: 50             # period for SMA
+  slope_window: 10              # trading days to assess slope for "declining"
+
+earnings_window:
+  pass_min_days: 30             # > 30 days away → Pass
+                                # within 30 days → Fail
+
+premium_yield:
+  target_delta: 0.275           # midpoint of 0.25–0.30
+  delta_tolerance: 0.10         # how far from target delta is acceptable
+  dte_min: 30                   # minimum DTE for expiration search
+  dte_max: 45                   # maximum DTE for expiration search
+  pass_yield: 0.01              # ≥ 1% of strike → Pass
+                                # < 1% → Fail
