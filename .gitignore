@@ -7,7 +7,7 @@ build/
 .pytest_cache/
 .venv/
 venv/
-data/
+/data/
 .DS_Store
 .claude/
 .streamlit/
